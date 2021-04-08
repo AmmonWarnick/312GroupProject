@@ -129,11 +129,29 @@ class TSPSolver:
     '''
 
     def fancy(self, time_allowance=60.0):
-		# https://cs.stackexchange.com/questions/88933/how-does-the-nearest-insertion-heuristic-for-tsp-work
-		# Create a Cycle that loops through the list of nodes (while loop)
+		# https://cs.stackexchange.com/questions/88933/how-does-the-nearest-insertion-heuristic-for-tsp-work]
+		bssf = self.greedy(time_allowance=time_allowance)['soln']
+		best = bssf.getListOfCities()
+		improve = True
+		while time.time() - start_time < time_allowance and improve:
+			improve = False
+			for i in range(1, len(best) - 2):
+				for j in range(i + 1, len(best)):
+					if j - i == 1: continue
+					new_route = best[:]
+					new_route[i:j] = best[j-1:i-1:-1]
+					if new_route['cost'] < best['cost']:
+						best = new_route
+						improved = True
+			route = best
 
+
+		# Create a Cycle that loops through the list of nodes (while loop)
+		
+			
 		# then use this formula d = distance, d[a,b] + d[b,c] - d[a,c] 
 		# make sure the total is minimal
+
 
 		# add b to the cycle 
 
@@ -141,6 +159,11 @@ class TSPSolver:
 		# add the edges of a,b and b,c
 
 		# check to see if all nodes are in the cycle if not keep going
-
-
-        pass
+        results['cost'] = bssf.cost
+        results['time'] = end_time - start_time
+        results['count'] = count
+        results['soln'] = bssf
+        results['max'] = None
+        results['total'] = None
+        results['pruned'] = None
+		return results
