@@ -133,8 +133,10 @@ class TSPSolver:
         results = []
         bssf = self.greedy(time_allowance=time_allowance)['soln']
         best = bssf.getListOfCities()
-		route = best
-		start_time = time.time()
+        route = best
+        start_time = time.time()
+        count = 0
+
         improve = True
         while time.time() - start_time < time_allowance and improve:
             improve = False
@@ -143,12 +145,23 @@ class TSPSolver:
                     if j - i == 1: continue
                     new_route = route[:]
                     new_route[i:j] = route[j - 1:i - 1:-1]
-					newSol = TSPSolution(new_route)
-                    if newSol._costOfRoute < bssf._costOfRoute:
-                        bssf = newSol
-						best = new_route
-                        improved = True
+                    newSol = TSPSolution(new_route)
+                if newSol._costOfRoute < bssf._costOfRoute:
+                    bssf = newSol
+                    best = new_route
+                    count += 1
+                    improve = True
             route = best
         end_time = time.time()
+        results['cost'] = bssf.cost
+        results['time'] = end_time - start_time
+        results['count'] = count
+        results['soln'] = bssf
+        results['max'] = None
+        results['total'] = None
+        results['pruned'] = None
+        return results
 
-        return bssf
+
+
+
