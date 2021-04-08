@@ -129,4 +129,18 @@ class TSPSolver:
     '''
 
     def fancy(self, time_allowance=60.0):
+		# https://cs.stackexchange.com/questions/88933/how-does-the-nearest-insertion-heuristic-for-tsp-work
+		# Create a Cycle that loops through the list of nodes (while loop)
+
+		# then use this formula d = distance, d[a,b] + d[b,c] - d[a,c] 
+		# make sure the total is minimal
+
+		# add b to the cycle 
+
+		# remove the edges of a and c
+		# add the edges of a,b and b,c
+
+		# check to see if all nodes are in the cycle if not keep going
+
+
         pass
