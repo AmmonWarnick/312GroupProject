@@ -40,7 +40,6 @@ class TSPSolution:
 
 	def getListOfCities(self):
 		return self.route
-	
 
 def nameForInt( num ):
 	if num == 0:
