@@ -130,7 +130,7 @@ class TSPSolver:
 
     def fancy(self, time_allowance=60.0):
         # https://cs.stackexchange.com/questions/88933/how-does-the-nearest-insertion-heuristic-for-tsp-work]
-        results = []
+        results = {}
         bssf = self.greedy(time_allowance=time_allowance)['soln']
         best = bssf.getListOfCities()
         route = best
@@ -146,11 +146,11 @@ class TSPSolver:
                     new_route = route[:]
                     new_route[i:j] = route[j - 1:i - 1:-1]
                     newSol = TSPSolution(new_route)
-                if newSol._costOfRoute < bssf._costOfRoute:
-                    bssf = newSol
-                    best = new_route
-                    count += 1
-                    improve = True
+                    if newSol._costOfRoute() < bssf._costOfRoute():
+                        bssf = newSol
+                        best = new_route
+                        count += 1
+                        improve = True
             route = best
         end_time = time.time()
         results['cost'] = bssf.cost
