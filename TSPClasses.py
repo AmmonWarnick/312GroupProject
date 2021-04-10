@@ -179,3 +179,9 @@ class City:
 
 		return int(math.ceil(cost * self.MAP_SCALE))
 
+	def getIndex(self):
+		return self._index
+
+	def __lt__(self, other):
+		return self._index < other._index
+

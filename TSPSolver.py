@@ -1,6 +1,8 @@
 #!/usr/bin/python3
 
 from which_pyqt import PYQT_VER
+from copy import deepcopy
+import traceback
 
 if PYQT_VER == 'PYQT5':
     from PyQt5.QtCore import QLineF, QPointF
@@ -117,7 +119,179 @@ class TSPSolver:
     '''
 
     def branchAndBound(self, time_allowance=60.0):
-        pass
+        try:
+            SCORE = 0
+            DEST = 1
+            CITIES = 2
+            MATRIX = 3
+            PATH = 4
+            COST = 5
+
+            # initialization is O(n) space, O(1) time
+            bssf = self.greedy(time_allowance=time_allowance)['soln']
+            cities = self._scenario.getCities()
+            self.cities = cities
+
+            heap = []
+            bssfNumUpdates = 0
+            maxQueueLen = 1
+            numStatesCreated = 1
+            numPruned = 0
+            numSolutions = 0
+            self.lowestCost = bssf.cost
+            # getting a reduced matrix is O(n^2) time and space
+            startingMatrix, lowerBound = self.initializeMatrix(cities)
+            starting = tuple((lowerBound,
+                              cities[0],
+                              cities[1:],
+                              startingMatrix,
+                              [cities[0]._index],
+                              lowerBound))
+            heapq.heappush(heap, starting)
+            startTime = time.time()
+            while time.time() - startTime < time_allowance:
+                #Check if heap is empty
+                if not len(heap):
+                    break
+
+                # pop is O(logn) time to re-heapify and O(1) space
+                nextCity = heapq.heappop(heap)
+
+                if nextCity[5] < self.lowestCost:
+                    for city in nextCity[2]:
+                        if self._scenario._edge_exists[nextCity[1]._index][city._index]:
+                            # Reduction is O(n^2) time & space
+                            reducedTuple = self.reduceMatrix(city, nextCity[3], nextCity)
+                            if not len(reducedTuple[CITIES]):
+                                # this is O(n) to get the cities
+                                route = self.getRoute(reducedTuple[PATH])
+                                bssf = TSPSolution(route)
+
+                                if bssf.cost < self.lowestCost:
+                                    self.lowestCost = min(bssf.cost, self.lowestCost)
+                                    bssfNumUpdates += 1
+                                    numSolutions += 1
+
+                            else:
+                                if reducedTuple[COST] < self.lowestCost:
+                                    # O(logn) time to add to heap
+                                    heapq.heappush(heap, reducedTuple)
+                                    numStatesCreated += 1
+                                else:
+                                    #Prune node
+                                    numPruned += 1
+                                    numStatesCreated += 1
+                else:
+                    numPruned += 1
+                    numStatesCreated += 1
+
+                maxQueueLen = max(len(heap), maxQueueLen)
+
+            endTime = time.time()
+            results = {}
+            results['cost'] = self.lowestCost
+            results['time'] = endTime - startTime
+            results['count'] = numSolutions
+            results['soln'] = bssf
+            results['max'] = maxQueueLen
+            results['total'] = numStatesCreated
+            results['pruned'] = numPruned
+            return results
+        except Exception as error:
+            print(traceback.format_exc())
+            raise (error)
+
+    def getPriority(self, score, visited):
+        # Change here to try different priorities
+        return score / len(visited)
+
+    def reduceMatrix(self, dest, matrix, myTuple):
+        SCORE = 0
+        DEST = 1
+        CITIES = 2
+        MATRIX = 3
+        PATH = 4
+        COST = 5
+
+        # O(1) time, O(n^2) space to copy the matrix
+        tupleCopy = deepcopy(myTuple)
+        matrix = matrix.copy()
+        reductionCost = 0
+        costToCity = matrix[tupleCopy[DEST]._index][dest._index]
+
+        # Reduce Matrix using algorithm from class:
+        # Set row and column to inf
+        matrix[tupleCopy[DEST]._index] = np.inf
+        matrix[:, dest._index] = np.inf
+        # Set used path to inf
+        matrix[dest._index][tupleCopy[DEST]._index] = np.inf
+        # O(n^2) time to reduce matrix
+        # No added space complexity, matrix already exists
+
+        for row in range(matrix.shape[0]):
+            # Reduce row
+            rowMin = np.min(matrix[row])
+            if np.isinf(rowMin):
+                continue
+            matrix[row] = matrix[row] - rowMin
+            reductionCost += rowMin
+
+        for col in range(matrix.shape[1]):
+            #Reduce Column
+            colMin = np.min(matrix[:, col])
+            if np.isinf(colMin):
+                continue
+            matrix[:, col] = matrix[:, col] - colMin
+            reductionCost += colMin
+
+        remainingCities = tupleCopy[CITIES]
+        remainingCities = self.removeCity(remainingCities, dest)
+
+        cost = tupleCopy[COST] + costToCity + reductionCost
+
+        newTuple = ((self.getPriority(tupleCopy[COST], tupleCopy[PATH]), dest, remainingCities, matrix,
+                     tupleCopy[PATH] + [dest._index], cost))
+        return newTuple
+
+    def initializeMatrix(self, cities):
+        matrix = np.full((len(cities), len(cities)), fill_value=np.inf)
+        for fromIndex, city in enumerate(cities):
+            for destIndex, destCity in enumerate(cities):
+                if fromIndex == destIndex:
+                    continue
+
+                dist = city.costTo(destCity)
+                matrix[fromIndex][destIndex] = dist
+
+        # O(n^2) time, need to visit every cell in matrix
+        reductionCost = 0
+
+        for row in range(matrix.shape[0]):
+            rowMin = np.min(matrix[row])
+            matrix[row] = matrix[row] - rowMin
+            reductionCost += rowMin
+
+        for col in range(matrix.shape[1]):
+            colMin = np.min(matrix[:, col])
+            matrix[:, col] = matrix[:, col] - colMin
+            reductionCost += colMin
+
+        return matrix, reductionCost
+
+    def getRoute(self, indices):
+        cities = []
+        for index in indices:
+            cities.append(self.cities[index])
+        return cities
+
+    def removeCity(self, remaining, nextCity):
+        for index, city in enumerate(remaining):
+            if city._index == nextCity._index:
+                indexToDelete = index
+                break
+        del remaining[indexToDelete]
+        return remaining
+
 
     ''' <summary>
         This is the entry point for the algorithm you'll write for your group project.
