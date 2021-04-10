@@ -303,7 +303,6 @@ class TSPSolver:
     '''
 
     def fancy(self, time_allowance=60.0):
-        # https://cs.stackexchange.com/questions/88933/how-does-the-nearest-insertion-heuristic-for-tsp-work]
         results = {}
         bssf = self.greedy(time_allowance=time_allowance)['soln']
         best = bssf.getListOfCities()
